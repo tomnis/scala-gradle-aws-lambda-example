@@ -1,10 +1,11 @@
 package com.workday.warp.handlers
 
-import java.io.{InputStream, OutputStream}
+import java.io.{DataOutputStream, InputStream, OutputStream}
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestHandler, RequestStreamHandler}
-import com.workday.warp.models.{mutable, immutable}
-import org.json4s._
+import com.workday.warp.models.{immutable, mutable}
+import org.json4s.{DefaultFormats, JValue}
+import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import org.pmw.tinylog.Logger
 
@@ -42,8 +43,11 @@ object ImmutableDotProductHandler extends RequestStreamHandler {
 
     val request: immutable.DotProductRequest = json.extract[immutable.DotProductRequest]
     val result: Double = request.vectorA dot request.vectorB
+    val response: String = compact(render("result" -> result))
 
-    output.write(4)
+    val dataOutput = new DataOutputStream(output)
+    dataOutput.writeChars(response)
+    dataOutput.close()
     output.close()
   }
 }

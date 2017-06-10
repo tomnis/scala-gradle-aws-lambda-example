@@ -1,9 +1,19 @@
 plugins {
     id 'scala'
     id 'com.github.johnrengelman.shadow' version '2.0.0'
+    id 'jp.classmethod.aws.lambda' version '0.35'
 }
 
+import com.amazonaws.services.lambda.model.Runtime;
+import com.amazonaws.services.lambda.model.InvocationType;
+import jp.classmethod.aws.gradle.lambda.AWSLambdaDeleteFunctionTask;
+import jp.classmethod.aws.gradle.lambda.AWSLambdaInvokeTask;
+import jp.classmethod.aws.gradle.lambda.AWSLambdaMigrateFunctionTask;
+
 version = '0.1-SNAPSHOT'
+ext.functionName = 'dot-product'
+ext.mutableFunctionName = ext.functionName + "-mutable"
+ext.immutableFunctionName = ext.functionName + "-immutable"
 
 repositories {
     jcenter()
@@ -12,15 +22,70 @@ repositories {
 dependencies {
     compile group: 'com.amazonaws', name: 'aws-java-sdk-lambda', version: '1.11.141'
     compile group: 'com.amazonaws', name: 'aws-lambda-java-core', version: '1.1.0'
-    compile group: 'org.tinylog', name: 'tinylog', version: '1.2'
+    compile group: 'org.json4s', name: 'json4s-jackson_2.12', version: '3.5.2'
     compile group: 'org.scala-lang', name: 'scala-library', version: '2.12.2'
-    compile group: 'org.scala-lang', name: 'scala-compiler', version: '2.12.2'
+    compile group: 'org.tinylog', name: 'tinylog', version: '1.2'
 
     testCompile group: 'org.scalatest', name: 'scalatest_2.12', version: '3.0.3'
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
-
 shadowJar {
     version = project.version
+}
+
+// uploads our shadowjar artifact to lambda.
+// your ~/.aws/credentials file should be correctly populated with key and secret
+task uploadMutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
+    functionName = project.mutableFunctionName
+    role = "arn:aws:iam::${aws.accountId}:role/lambda"
+    runtime = Runtime.Java8
+    // its slow the first time :(
+    timeout = 10
+    memorySize = 512
+    zipFile = shadowJar.archivePath
+    handler = 'com.workday.warp.handlers.MutableDotProductHandler::handleRequest'
+}
+
+task deleteMutableLambda(type: AWSLambdaDeleteFunctionTask) {
+    functionName = project.mutableFunctionName
+}
+
+task invokeMutableLambda(type: AWSLambdaInvokeTask) {
+    functionName = project.mutableFunctionName
+    invocationType = InvocationType.RequestResponse
+    payload = file("src/test/resources/input.json")
+    doLast {
+        println "Lambda function (using mutable java-bean deserialization) results: "
+        println "  status code: " + invokeResult.statusCode
+        println "  payload: " + new String(invokeResult.payload.array(), "UTF-8")
+    }
+}
+
+
+// similar tasks for immutable version using json4s deserialization.
+task uploadImmutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
+    functionName = project.immutableFunctionName
+    role = "arn:aws:iam::${aws.accountId}:role/lambda"
+    runtime = Runtime.Java8
+    // its slow the first time :(
+    timeout = 10
+    memorySize = 512
+    zipFile = shadowJar.archivePath
+    handler = 'com.workday.warp.handlers.ImmutableDotProductHandler::handleRequest'
+}
+
+task deleteImmutableLambda(type: AWSLambdaDeleteFunctionTask) {
+    functionName = project.immutableFunctionName
+}
+
+task invokeImmutableLambda(type: AWSLambdaInvokeTask) {
+    functionName = project.immutableFunctionName
+    invocationType = InvocationType.RequestResponse
+    payload = file("src/test/resources/input.json")
+    doLast {
+        println "Lambda function (using immutable json4s deserialization) results: "
+        println "  status code: " + invokeResult.statusCode
+        println "  payload: " + new String(invokeResult.payload.array(), "UTF-8")
+    }
 }
