@@ -11,9 +11,17 @@ import jp.classmethod.aws.gradle.lambda.AWSLambdaInvokeTask;
 import jp.classmethod.aws.gradle.lambda.AWSLambdaMigrateFunctionTask;
 
 version = '0.1-SNAPSHOT'
+
 ext.functionName = 'dot-product'
 ext.mutableFunctionName = ext.functionName + "-mutable"
 ext.immutableFunctionName = ext.functionName + "-immutable"
+ext.role = "arn:aws:iam::${aws.accountId}:role/lambda"
+ext.timeout = 8 // it might be slow the first time :(
+ext.memorySize = 512 // in MB
+ext.runtime = Runtime.Java8
+ext.payload = file("src/test/resources/input.json") // sample input data, 2 serialized vectors in 3-space
+ext.invocationType = InvocationType.RequestResponse
+ext.artifactPath = shadowJar.archivePath // path to the shadowjar. we'll upload this jar to lambda when creating functions
 
 repositories {
     jcenter()
@@ -38,23 +46,24 @@ shadowJar {
 // your ~/.aws/credentials file should be correctly populated with key and secret
 task uploadMutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
     functionName = project.mutableFunctionName
-    role = "arn:aws:iam::${aws.accountId}:role/lambda"
-    runtime = Runtime.Java8
-    // its slow the first time :(
-    timeout = 10
-    memorySize = 512
-    zipFile = shadowJar.archivePath
+    role = project.role
+    runtime = project.runtime
+    timeout = project.timeout
+    memorySize = project.memorySize
+    zipFile = project.artifactPath
     handler = 'com.workday.warp.handlers.MutableDotProductHandler::handleRequest'
 }
 
+// deletes the lambda function associated with our mutable request type
 task deleteMutableLambda(type: AWSLambdaDeleteFunctionTask) {
     functionName = project.mutableFunctionName
 }
 
+// invokes the lambda function associated with our mutable request type
 task invokeMutableLambda(type: AWSLambdaInvokeTask) {
     functionName = project.mutableFunctionName
-    invocationType = InvocationType.RequestResponse
-    payload = file("src/test/resources/input.json")
+    invocationType = project.invocationType
+    payload = project.payload
     doLast {
         println "Lambda function (using mutable java-bean deserialization) results: "
         println "  status code: " + invokeResult.statusCode
@@ -66,12 +75,11 @@ task invokeMutableLambda(type: AWSLambdaInvokeTask) {
 // similar tasks for immutable version using json4s deserialization.
 task uploadImmutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
     functionName = project.immutableFunctionName
-    role = "arn:aws:iam::${aws.accountId}:role/lambda"
-    runtime = Runtime.Java8
-    // its slow the first time :(
-    timeout = 10
-    memorySize = 512
-    zipFile = shadowJar.archivePath
+    role = project.role
+    runtime = project.runtime
+    timeout = project.timeout
+    memorySize = project.memorySize
+    zipFile = project.artifactPath
     handler = 'com.workday.warp.handlers.ImmutableDotProductHandler::handleRequest'
 }
 
@@ -81,8 +89,8 @@ task deleteImmutableLambda(type: AWSLambdaDeleteFunctionTask) {
 
 task invokeImmutableLambda(type: AWSLambdaInvokeTask) {
     functionName = project.immutableFunctionName
-    invocationType = InvocationType.RequestResponse
-    payload = file("src/test/resources/input.json")
+    invocationType = project.invocationType
+    payload = project.payload
     doLast {
         println "Lambda function (using immutable json4s deserialization) results: "
         println "  status code: " + invokeResult.statusCode
