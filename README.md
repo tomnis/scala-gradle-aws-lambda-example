@@ -21,6 +21,14 @@ Lambda has 2 different ways to implement request handlers:
   http://docs.aws.amazon.com/lambda/latest/dg/java-handler-io-type-pojo.html
   
   Your request class should have an empty-arg constructor and javabean standard getters/setters. See `com.workday.warp.mutable.Model.scala`. In our case, we use `scala.beans.BeanProperty` annotation to generate the correct accessors and mutators.
+  ```
+  class Vec3(@BeanProperty var x: Double,
+             @BeanProperty var y: Double,
+             @BeanProperty var z: Double) extends Vec3Like {
+
+    def this() = this(0, 0, 0)
+  }
+  ```
 - Stream-based, where your request handler is passed an `InputStream` to read request data from, and an `OutputStream` to write response to.
   
   http://docs.aws.amazon.com/lambda/latest/dg/java-handler-io-type-stream.html
@@ -49,6 +57,20 @@ Lambda function (using stream json4s deserialization with immutable case classes
 BUILD SUCCESSFUL
 ```
 
-Similar tasks are defined for the POJO-based handler.
+This sequence of gradle tasks builds a shadowjar, uploads that artifact to create a lambda function, and invokes that function with sample input data:
+```
+{
+  "vectorA": {
+    "x": 1.0,
+    "y": 1.0,
+    "z": 1.0
+  },
+  "vectorB": {
+    "x": 1.0,
+    "y": 1.0,
+    "z": 1.0
+  }
+}
+```
 
-The gradle task `invokeImmutableLambda
+Similar tasks `deletePojoLambda`, `uploadPojoLambda`, `invokePojoLambda` are defined for the POJO-based handler.
