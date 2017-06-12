@@ -123,7 +123,7 @@ This sequence of gradle tasks builds a shadowjar, uploads that artifact to creat
 Similar tasks `deletePojoLambda`, `uploadPojoLambda`, `invokePojoLambda` are defined for the POJO-based handler.
 
 ### Gradle upload task
-This task will overwrite an existing lambda function with the same name, or create one if it does not exist.
+This task will overwrite an existing lambda function with the same name, or create one if it does not exist. Make sure the aws role exists.
 ```
 task uploadStreamLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
     functionName = 'dot-product-stream'
