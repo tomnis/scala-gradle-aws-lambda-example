@@ -7,7 +7,7 @@ Our lambda function is a simple vector dot product (restricted to 3-space for si
 - Make sure your aws credentials can be located by the credentials toolchain
 
   http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
-- I put mine in `~/.aws/credentials`, like this:
+  I put mine in `~/.aws/credentials`, like this:
 
   ```
   ~ » cat ~/.aws/credentials
