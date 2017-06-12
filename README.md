@@ -8,12 +8,13 @@ Getting started:
 
   http://docs.aws.amazon.com/sdk-for-java/v1/developer-guide/credentials.html
 - I put mine in `~/.aws/credentials`, like this:
-```
-~ » cat ~/.aws/credentials
-[default]
-aws_access_key_id=abcdefg
-aws_secret_access_key=12345
-```
+
+  ```
+  ~ » cat ~/.aws/credentials
+  [default]
+  aws_access_key_id=abcdefg
+  aws_secret_access_key=12345
+  ```
 
 Lambda has 2 different ways to implement request handlers:
 - POJO-based, where jackson is used to deserialize request into a mutable class.
