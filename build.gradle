@@ -13,11 +13,11 @@ import jp.classmethod.aws.gradle.lambda.AWSLambdaMigrateFunctionTask;
 version = '0.1-SNAPSHOT'
 
 ext.functionName = 'dot-product'
-ext.mutableFunctionName = ext.functionName + "-mutable"
-ext.immutableFunctionName = ext.functionName + "-immutable"
+ext.pojoFunctionName = ext.functionName + "-pojo"
+ext.streamFunctionName = ext.functionName + "-stream"
 ext.role = "arn:aws:iam::${aws.accountId}:role/lambda"
-ext.timeout = 8 // it might be slow the first time :(
-ext.memorySize = 512 // in MB
+ext.timeout = 8 // in seconds. it might be slow the first time :(
+ext.memorySize = 512 // in MB.
 ext.runtime = Runtime.Java8
 ext.payload = file("src/test/resources/input.json") // sample input data, 2 serialized vectors in 3-space
 ext.invocationType = InvocationType.RequestResponse
@@ -44,28 +44,28 @@ shadowJar {
 
 // uploads our shadowjar artifact to lambda.
 // your ~/.aws/credentials file should be correctly populated with key and secret
-task uploadMutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
-    functionName = project.mutableFunctionName
+task uploadPojoLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
+    functionName = project.pojoFunctionName
     role = project.role
     runtime = project.runtime
     timeout = project.timeout
     memorySize = project.memorySize
     zipFile = project.artifactPath
-    handler = 'com.workday.warp.handlers.MutableDotProductHandler::handleRequest'
+    handler = 'com.workday.warp.handlers.PojoDotProductHandler::handleRequest'
 }
 
-// deletes the lambda function associated with our mutable request type
-task deleteMutableLambda(type: AWSLambdaDeleteFunctionTask) {
-    functionName = project.mutableFunctionName
+// deletes the lambda function associated with our pojo request type
+task deletePojoLambda(type: AWSLambdaDeleteFunctionTask) {
+    functionName = project.pojoFunctionName
 }
 
-// invokes the lambda function associated with our mutable request type
-task invokeMutableLambda(type: AWSLambdaInvokeTask) {
-    functionName = project.mutableFunctionName
+// invokes the lambda function associated with our pojo request type
+task invokePojoLambda(type: AWSLambdaInvokeTask) {
+    functionName = project.pojoFunctionName
     invocationType = project.invocationType
     payload = project.payload
     doLast {
-        println "Lambda function (using mutable java-bean deserialization) results: "
+        println "Lambda function (using pojo java-bean POJO deserialization) results: "
         println "  status code: " + invokeResult.statusCode
         println "  payload: " + new String(invokeResult.payload.array(), "UTF-8")
     }
@@ -73,26 +73,26 @@ task invokeMutableLambda(type: AWSLambdaInvokeTask) {
 
 
 // similar tasks for immutable version using json4s deserialization.
-task uploadImmutableLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
-    functionName = project.immutableFunctionName
+task uploadStreamLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
+    functionName = project.streamFunctionName
     role = project.role
     runtime = project.runtime
     timeout = project.timeout
     memorySize = project.memorySize
     zipFile = project.artifactPath
-    handler = 'com.workday.warp.handlers.ImmutableDotProductHandler::handleRequest'
+    handler = 'com.workday.warp.handlers.StreamDotProductHandler::handleRequest'
 }
 
-task deleteImmutableLambda(type: AWSLambdaDeleteFunctionTask) {
-    functionName = project.immutableFunctionName
+task deleteStreamLambda(type: AWSLambdaDeleteFunctionTask) {
+    functionName = project.streamFunctionName
 }
 
-task invokeImmutableLambda(type: AWSLambdaInvokeTask) {
-    functionName = project.immutableFunctionName
+task invokeStreamLambda(type: AWSLambdaInvokeTask) {
+    functionName = project.streamFunctionName
     invocationType = project.invocationType
     payload = project.payload
     doLast {
-        println "Lambda function (using immutable json4s deserialization) results: "
+        println "Lambda function (using stream json4s deserialization with immutable case classes) results: "
         println "  status code: " + invokeResult.statusCode
         println "  payload: " + new String(invokeResult.payload.array(), "UTF-8")
     }

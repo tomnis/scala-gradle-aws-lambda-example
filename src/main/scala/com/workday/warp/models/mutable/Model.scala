@@ -18,15 +18,15 @@ import scala.beans.BeanProperty
   * Created by tomas.mccandless on 6/8/17.
   */
 class DotProductRequest(@BeanProperty var vectorA: Vec3,
-                             @BeanProperty var vectorB: Vec3) extends RequestLike {
+                        @BeanProperty var vectorB: Vec3) extends RequestLike {
 
   def this() = this(new Vec3, new Vec3)
 }
 
 
 class Vec3(@BeanProperty var x: Double,
-                @BeanProperty var y: Double,
-                @BeanProperty var z: Double) extends Vec3Like {
+           @BeanProperty var y: Double,
+           @BeanProperty var z: Double) extends Vec3Like {
 
   def this() = this(0, 0, 0)
 }
