@@ -15,6 +15,12 @@ Our lambda function is a simple vector dot product (restricted to 3-space for si
   aws_access_key_id=abcdefg
   aws_secret_access_key=12345
   ```
+  
+- Your aws account id should be accessible as a project property by gradle. I put mine in `~/.gradle/gradle.properties`
+  ```
+  ~ » grep aws ~/.gradle/gradle.properties                                                          
+  aws.accountId=3141592653589
+  ```
 
 ### Lambda has 2 different ways to implement request handlers:
 - POJO-based, where jackson is used to deserialize request into a mutable class.
@@ -52,6 +58,10 @@ Our lambda function is a simple vector dot product (restricted to 3-space for si
   
   We read all data from the input stream and use `json4s` to deserialize into immutable case classes:
   ```
+  case class DotProductRequest(vectorA: Vec3, vectorB: Vec3) extends RequestLike
+
+  case class Vec3(x: Double, y: Double, z: Double) extends Vec3Like
+  
   object StreamDotProductHandler extends RequestStreamHandler {
 
     override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
@@ -111,3 +121,17 @@ This sequence of gradle tasks builds a shadowjar, uploads that artifact to creat
 ```
 
 Similar tasks `deletePojoLambda`, `uploadPojoLambda`, `invokePojoLambda` are defined for the POJO-based handler.
+
+### Gradle upload task
+This task will overwrite an existing lambda function with the same name, or create one if it does not exist.
+```
+task uploadStreamLambda(type: AWSLambdaMigrateFunctionTask, dependsOn: shadowJar) {
+    functionName = 'dot-product-stream'
+    role = "arn:aws:iam::${aws.accountId}:role/lambda"
+    runtime = Runtime.Java8
+    timeout = 5 // seconds
+    memorySize = 512 // MB
+    zipFile = shadowJar.archivePath
+    handler = 'com.workday.warp.handlers.StreamDotProductHandler::handleRequest'
+}
+```
